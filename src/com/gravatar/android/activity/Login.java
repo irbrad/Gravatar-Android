@@ -47,6 +47,7 @@ public class Login extends Activity implements View.OnClickListener {
 		mProgressDialog.dismiss();
 		if (loginSuccessful) {
 			startActivity(new Intent(getApplicationContext(), SelectEmail.class));
+			this.finish();
 		} else {
 			AlertUtil.showAlert(Login.this, R.string.invalid_credentials, R.string.invalid_credentials_message);
 		}
