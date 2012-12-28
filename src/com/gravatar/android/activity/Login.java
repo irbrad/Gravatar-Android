@@ -5,8 +5,8 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Looper;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -38,21 +38,6 @@ public class Login extends Activity implements View.OnClickListener {
 		mSignUpButton.setOnClickListener(this);
 	}
 
-	private void performLogin() {
-		final String email = mEmailEdit.getText().toString().trim();
-		final String password = mPasswordEdit.getText().toString().trim();
-
-		GravatarApplication.GravatarService = new GravatarService(email, password);
-		boolean loginSuccessful = GravatarApplication.GravatarService.verifyCredentials();
-		mProgressDialog.dismiss();
-		if (loginSuccessful) {
-			startActivity(new Intent(getApplicationContext(), SelectEmail.class));
-			this.finish();
-		} else {
-			AlertUtil.showAlert(Login.this, R.string.invalid_credentials, R.string.invalid_credentials_message);
-		}
-	}
-
 	@Override
 	public void onClick(View view) {
 		switch (view.getId()) {
@@ -60,22 +45,36 @@ public class Login extends Activity implements View.OnClickListener {
 				if (mSystemService.getActiveNetworkInfo() == null) {
 					AlertUtil.showAlert(Login.this, R.string.no_network_title, R.string.no_network_message);
 				} else {
-					mProgressDialog = ProgressDialog.show(Login.this, getString(R.string.logging_in),
-							getString(R.string.auth_and_sync), true, false);
-
-					Thread action = new Thread() {
-						public void run() {
-							Looper.prepare();
-							performLogin();
-							Looper.loop();
-						}
-					};
-					action.start();
+					String email = mEmailEdit.getText().toString().trim();
+					String password = mPasswordEdit.getText().toString().trim();
+					AsyncTask<String, Void, Boolean> task = new PerformLoginTask().execute(email, password);
 				}
 				break;
 			case R.id.gravatardotcom:
 				startActivity(new Intent(Login.this, SignUp.class));
 				break;
+		}
+	}
+
+	private class PerformLoginTask extends AsyncTask<String, Void, Boolean> {
+		protected Boolean doInBackground(String... args) {
+			GravatarApplication.GravatarService = new GravatarService(args[0], args[1]);
+			return Boolean.valueOf(GravatarApplication.GravatarService.verifyCredentials());
+		}
+
+		protected void onPreExecute() {
+			mProgressDialog = ProgressDialog.show(Login.this, getString(R.string.logging_in),
+					getString(R.string.auth_and_sync), true, false);
+		}
+
+		protected void onPostExecute(Boolean loginResult) {
+			mProgressDialog.dismiss();
+			if (loginResult) {
+				startActivity(new Intent(getApplicationContext(), SelectEmail.class));
+				Login.this.finish();
+			} else {
+				AlertUtil.showAlert(Login.this, R.string.invalid_credentials, R.string.invalid_credentials_message);
+			}
 		}
 	}
 }

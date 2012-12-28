@@ -8,9 +8,9 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Looper;
 import android.provider.MediaStore;
 import android.view.ContextMenu;
 import android.view.MenuItem;
@@ -18,9 +18,9 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.Toast;
-import com.gravatar.android.adapter.GravatarAddressAdapter;
 import com.gravatar.android.GravatarApplication;
 import com.gravatar.android.R;
+import com.gravatar.android.adapter.GravatarAddressAdapter;
 import com.gravatar.android.util.ImageHelper;
 import com.gravatar.xmlrpc.GravatarAddress;
 
@@ -48,16 +48,7 @@ public class SelectEmail extends Activity {
 		setContentView(R.layout.selectemail);
 
 		// start downloading the existing email addresses for this account
-		mProgressDialog = ProgressDialog.show(SelectEmail.this, getString(R.string.downloading),
-				getString(R.string.syncing_account_message), true, false);
-		Thread action = new Thread() {
-			public void run() {
-				Looper.prepare();
-				getEmailAddresses();
-				Looper.loop();
-			}
-		};
-		action.start();
+		AsyncTask<Void, Void, List<GravatarAddress>> task = new UpdateEmailAddressListTask().execute();
 
 		mListView = (ListView) findViewById(R.id.emailListView);
 		mListView.setOnItemClickListener(new
@@ -220,35 +211,6 @@ public class SelectEmail extends Activity {
 		}
 	}
 
-	private void selectUserImage(String userImageId, String email) {
-		this.runOnUiThread(new Runnable() {
-			@Override
-			public void run() {
-				mProgressDialog = ProgressDialog.show(SelectEmail.this, getString(R.string.sending_changes), getString(R.string.please_wait_while),
-						true, false);
-			}
-		});
-
-		// set the user image
-		ArrayList<String> emails = new ArrayList<String>();
-		emails.add(email);
-		GravatarApplication.GravatarService.useUserImage(userImageId, emails);
-		mAddressList = GravatarApplication.GravatarService.getAddresses();
-
-		// update the list and toast
-		this.runOnUiThread(new
-				                   Runnable() {
-					                   @Override
-					                   public void run() {
-						                   GravatarAddressAdapter a = (GravatarAddressAdapter) mListView.getAdapter();
-						                   a.setGravatarAddressList(mAddressList);
-						                   a.notifyDataSetChanged();
-						                   mProgressDialog.dismiss();
-						                   Toast.makeText(getApplicationContext(), getString(R.string.updated_gravatar), Toast.LENGTH_LONG).show();
-					                   }
-				                   });
-	}
-
 	private byte[] getByteArrayFromCroppedImage() {
 		byte[] bytes = null;
 		try {
@@ -271,47 +233,6 @@ public class SelectEmail extends Activity {
 		} catch (Exception ex) {
 		}
 		return bytes;
-	}
-
-	private void uploadNewImage() {
-		this.runOnUiThread(new Runnable() {
-			@Override
-			public void run() {
-				mProgressDialog = ProgressDialog.show(SelectEmail.this, getString(R.string.sending_changes), getString(R.string.please_wait_while),
-						true, false);
-			}
-		});
-
-		byte[] bytes = getByteArrayFromCroppedImage();
-		if (bytes == null) {
-			Toast.makeText(getApplicationContext(), getString(R.string.unable_to_access_crop), Toast.LENGTH_LONG).show();
-			return;
-		}
-
-		// upload the image
-		String encodedString = android.util.Base64.encodeToString(bytes, android.util.Base64.DEFAULT);
-		String userImageId = GravatarApplication.GravatarService.saveImage(encodedString, 0);
-
-		// select the newly uploaded image
-		String email = mAddressList.get(mCurrentEmailSelected).getEmail();
-		ArrayList<String> emails = new ArrayList<String>();
-		emails.add(email);
-		GravatarApplication.GravatarService.useUserImage(userImageId, emails);
-
-		// update the list of addresses
-		mAddressList = GravatarApplication.GravatarService.getAddresses();
-		this.runOnUiThread(new
-				                   Runnable() {
-					                   @Override
-					                   public void run() {
-
-						                   GravatarAddressAdapter a = (GravatarAddressAdapter) mListView.getAdapter();
-						                   a.setGravatarAddressList(mAddressList);
-						                   a.notifyDataSetChanged();
-						                   mProgressDialog.dismiss();
-						                   Toast.makeText(getApplicationContext(), getString(R.string.updated_gravatar), Toast.LENGTH_LONG).show();
-					                   }
-				                   });
 	}
 
 	@Override
@@ -348,15 +269,7 @@ public class SelectEmail extends Activity {
 					if (extras != null) {
 						final String userImageId = extras.getString("id");
 						final String email = mAddressList.get(mCurrentEmailSelected).getEmail();
-
-						Thread action = new Thread() {
-							public void run() {
-								Looper.prepare();
-								selectUserImage(userImageId, email);
-								Looper.loop();
-							}
-						};
-						action.start();
+						AsyncTask<String, Void, Boolean> task = new SelectExistingImageTask().execute(userImageId, email);
 					}
 					break;
 				case ACTIVITY_REQUEST_CODE_CROP:
@@ -364,14 +277,7 @@ public class SelectEmail extends Activity {
 							SelectRating.class), ACTIVITY_REQUEST_CODE_RATING);
 					break;
 				case ACTIVITY_REQUEST_CODE_RATING:
-					Thread action = new Thread() {
-						public void run() {
-							Looper.prepare();
-							uploadNewImage();
-							Looper.loop();
-						}
-					};
-					action.start();
+					AsyncTask<Void, Void, Boolean> task = new UploadImageTask().execute();
 					break;
 			}
 		}
@@ -400,4 +306,104 @@ public class SelectEmail extends Activity {
 			this.setRequestedOrientation(orientation);
 		}
 	}
+
+	private class UploadImageTask extends AsyncTask<Void, Void, Boolean> {
+		protected Boolean doInBackground(Void... args) {
+			try {
+				byte[] bytes = getByteArrayFromCroppedImage();
+				if (bytes == null) {
+					return Boolean.valueOf(false);
+				}
+
+				// upload the image
+				String encodedString = android.util.Base64.encodeToString(bytes, android.util.Base64.DEFAULT);
+				String userImageId = GravatarApplication.GravatarService.saveImage(encodedString, 0);
+
+				// select the newly uploaded image
+				String email = mAddressList.get(mCurrentEmailSelected).getEmail();
+				ArrayList<String> emails = new ArrayList<String>();
+				emails.add(email);
+				GravatarApplication.GravatarService.useUserImage(userImageId, emails);
+
+				// update the list of addresses
+				mAddressList = GravatarApplication.GravatarService.getAddresses();
+				return Boolean.valueOf(true);
+			} catch (Exception e) {
+				return Boolean.valueOf(false);
+			}
+		}
+
+		protected void onPreExecute() {
+			mProgressDialog = ProgressDialog.show(SelectEmail.this, getString(R.string.sending_changes), getString(R.string.please_wait_while),
+					true, false);
+		}
+
+		protected void onPostExecute(Boolean updateSuccess) {
+			if (updateSuccess) {
+				GravatarAddressAdapter a = (GravatarAddressAdapter) mListView.getAdapter();
+				a.setGravatarAddressList(mAddressList);
+				a.notifyDataSetChanged();
+				Toast.makeText(getApplicationContext(), getString(R.string.updated_gravatar), Toast.LENGTH_LONG).show();
+			} else {
+				Toast.makeText(getApplicationContext(), getString(R.string.failed_updating_gravatar), Toast.LENGTH_LONG).show();
+			}
+			mProgressDialog.dismiss();
+		}
+	}
+
+	private class SelectExistingImageTask extends AsyncTask<String, Void, Boolean> {
+		protected Boolean doInBackground(String... args) {
+			try {
+				String userImageId = args[0];
+				String email = args[1];
+
+				// set the user image
+				ArrayList<String> emails = new ArrayList<String>();
+				emails.add(email);
+				GravatarApplication.GravatarService.useUserImage(userImageId, emails);
+				mAddressList = GravatarApplication.GravatarService.getAddresses();
+
+				return Boolean.valueOf(true);
+			} catch (Exception e) {
+				return Boolean.valueOf(false);
+			}
+		}
+
+		protected void onPreExecute() {
+			mProgressDialog = ProgressDialog.show(SelectEmail.this, getString(R.string.sending_changes), getString(R.string.please_wait_while),
+					true, false);
+		}
+
+		protected void onPostExecute(Boolean updateSuccess) {
+			if (updateSuccess) {
+				GravatarAddressAdapter a = (GravatarAddressAdapter) mListView.getAdapter();
+				a.setGravatarAddressList(mAddressList);
+				a.notifyDataSetChanged();
+				mProgressDialog.dismiss();
+				Toast.makeText(getApplicationContext(), getString(R.string.updated_gravatar), Toast.LENGTH_LONG).show();
+			} else {
+				Toast.makeText(getApplicationContext(), getString(R.string.failed_updating_gravatar), Toast.LENGTH_LONG).show();
+			}
+			mProgressDialog.dismiss();
+		}
+	}
+
+	private class UpdateEmailAddressListTask extends AsyncTask<Void, Void, List<GravatarAddress>> {
+		protected List<GravatarAddress> doInBackground(Void... args) {
+			return GravatarApplication.GravatarService.getAddresses();
+		}
+
+		protected void onPreExecute() {
+			mProgressDialog = ProgressDialog.show(SelectEmail.this, getString(R.string.downloading),
+					getString(R.string.syncing_account_message), true, false);
+		}
+
+		protected void onPostExecute(List<GravatarAddress> addressList) {
+			mAddressList = addressList;
+			mListView.setAdapter(new GravatarAddressAdapter(SelectEmail.this, R.layout.listitem, mAddressList));
+			registerForContextMenu(mListView);
+			mProgressDialog.dismiss();
+		}
+	}
 }
+
