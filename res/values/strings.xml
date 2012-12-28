@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Gravatar</string>
+    <string name="login">Login</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="new_account">New Account</string>
+    <string name="no_account">Don\'t yet have an account?</string>
+    <string name="get_free_account">Get a free account at Gravatar.com</string>
+    <string name="no_network_title">No network available</string>
+    <string name="no_network_message">There is no network available. Please connect to a network and try again.</string>
+    <string name="logging_in">Logging in</string>
+    <string name="auth_and_sync">Authenticating...</string>
+    <string name="invalid_credentials">Authentication Failed</string>
+    <string name="invalid_credentials_message">The credentials entered are incorrect.</string>
+    <string name="syncing_account_message">Downloading account information</string>
+    <string name="syncing_images_message">Downloading existing user images</string>
+    <string name="syncing_account">Syncing Account</string>
+    <string name="ok">OK</string>
+    <string name="select_photo">Use a photo from Gallery</string>
+    <string name="take_photo">Take a new photo</string>
+    <string name="select_gravatar">Select an existing Gravatar</string>
+    <string name="sdcard_title">SD Card Required</string>
+    <string name="sdcard_message">A mounted SD card is required.</string>
+    <string name="updated_gravatar">Your gravatar has been updated. It may take a few minutes before it\'s active.
+    </string>
+    <string name="downloading">Downloading</string>
+    <string name="gallery_error">Sorry, the media item could not be retrieved from the Gallery.</string>
+    <string name="select_rating">Select rating</string>
+    <string name="sending_changes">Sending changes</string>
+    <string name="please_wait_while">Please wait while the changes are sent to Gravatar</string>
+    <string name="no_crop_on_device">Your device does not support cropping so the image will be cropped automatically
+    </string>
+    <string name="unable_to_access_crop">Unable to access the cropped file</string>
+    <string name="unable_to_create_crop">Unable to create temporary crop file</string>
+    <string name="no_sd_card">No SD card present</string>
+    <string name="photo_not_found">Unable to find the photo file</string>
+</resources>
