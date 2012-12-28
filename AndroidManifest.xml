@@ -45,7 +45,9 @@
                 />
         <activity
                 android:name=".activity.SelectEmail"
-                android:configChanges="orientation|keyboardHidden"/>
+                android:label="@string/select_email"
+                android:configChanges="orientation|keyboardHidden"
+                android:theme="@style/IncludeTitleBar"/>
         <activity
                 android:name=".activity.SelectImage"
                 android:label="@string/select_gravatar"

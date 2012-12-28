@@ -19,7 +19,7 @@
     <string name="ok">OK</string>
     <string name="select_photo">Use a photo from Gallery</string>
     <string name="take_photo">Take a new photo</string>
-    <string name="select_gravatar">Select an existing Gravatar</string>
+    <string name="select_gravatar">Select an existing Gravatar image</string>
     <string name="sdcard_title">SD Card Required</string>
     <string name="sdcard_message">A mounted SD card is required.</string>
     <string name="updated_gravatar">Your gravatar has been updated. It may take a few minutes before it\'s active.
@@ -35,4 +35,5 @@
     <string name="unable_to_create_crop">Unable to create temporary crop file</string>
     <string name="no_sd_card">No SD card present</string>
     <string name="photo_not_found">Unable to find the photo file</string>
+    <string name="select_email">Select a Gravatar to manage</string>
 </resources>
